@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="ProjectModuleManager">
+    <modules>
+      <module fileurl="file://$PROJECT_DIR$/BloodPressureMonitor_Single.iml" filepath="$PROJECT_DIR$/BloodPressureMonitor_Single.iml" group="BloodPressureMonitor_Single" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/Monitor-master-zgs.iml" filepath="$PROJECT_DIR$/.idea/modules/Monitor-master-zgs.iml" group="Monitor-master-zgs" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/app/Monitor-master-zgs-app.iml" filepath="$PROJECT_DIR$/.idea/modules/app/Monitor-master-zgs-app.iml" group="Monitor-master-zgs/app" />
+      <module fileurl="file://$PROJECT_DIR$/app/app.iml" filepath="$PROJECT_DIR$/app/app.iml" group="BloodPressureMonitor_Single/app" />
+    </modules>
+  </component>
+</project>

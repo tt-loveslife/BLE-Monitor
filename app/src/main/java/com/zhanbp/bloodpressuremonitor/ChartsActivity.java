@@ -97,9 +97,6 @@ public class ChartsActivity extends Activity implements View.OnClickListener {  
 	private TextView BLE1_offset;
 	private TextView BLE2_offset;
 
-	private EditText PS;
-	private EditText PD;
-
 	/* 定时器 和 定时任务 */
 	private Timer timer = new Timer();
 	private TimerTask task;
@@ -170,9 +167,6 @@ public class ChartsActivity extends Activity implements View.OnClickListener {  
 		protected void onPostExecute(int[][] paramList) {
 			if ((ChartsActivity.this.progressDialog != null) && (ChartsActivity.this.progressDialog.isShowing()))
 				ChartsActivity.this.progressDialog.dismiss();
-			if (paramList != null) {
-				//pressure_data = paramList;
-			}
 		}
 	}
 
@@ -262,8 +256,8 @@ public class ChartsActivity extends Activity implements View.OnClickListener {  
 		}
 		SPO2_Record_Data = new ArrayList<>();
 
-		seriesDC1 = new TimeSeries("BP-DC-1");
-		seriesDC2 = new TimeSeries("BP-DC-2");
+		seriesDC1 = new TimeSeries("time1");
+		seriesDC2 = new TimeSeries("time2");
 		int nr = 201;                                        //200个数
 		for (int k = 0; k < nr; k++) {
 			seriesDC1.add(k, 0);    //初始化为0
@@ -642,6 +636,10 @@ public class ChartsActivity extends Activity implements View.OnClickListener {  
 			}
 		}
 		EventBus.getDefault().post(new RefreshDatas()); // 发送消息，更新UI 显示数据 ④发送事件
+	}
+
+	public void onEventMainThread(RefreshDatas event) { //   ③处理事件
+
 	}
 
 	/**

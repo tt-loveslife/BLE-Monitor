@@ -42,7 +42,6 @@ public class MainActivity extends Activity implements View.OnClickListener {
 
     private Button btnSelectDevice ;  //选择需要绑定的设备
     private Button btnStartConnect ;  //开始连接按钮
-    private TextView txtContentMac ; //获取到的数据解析结果显示
 
     private ArrayList<String> connectDeviceMacList ; //需要连接的mac设备集合
     private ArrayList<String> connectDeviceNameList;
@@ -65,7 +64,6 @@ public class MainActivity extends Activity implements View.OnClickListener {
     private void initView() {
         btnSelectDevice = (Button) findViewById(R.id.btnSelectDevice);
         btnStartConnect = (Button) findViewById(R.id.btnStartConnect);
-        txtContentMac = (TextView) findViewById(R.id.txtContentMac);
     }
 
     @Override

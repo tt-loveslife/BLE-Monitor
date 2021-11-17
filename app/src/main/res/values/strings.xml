@@ -20,8 +20,8 @@
     <string name="start_scan">\u0020\u0020\u0020\u0020开始扫描\u0020\u0020\u0020\u0020</string>
     <string name="stop_scan">\u0020\u0020\u0020\u0020停止扫描\u0020\u0020\u0020\u0020</string>
     <string name="finish_select">完成选择设备</string>
-    <string name="ble1_offset">ble1:u0020\u0020\u0020\u0020\u0020</string>
-    <string name="ble2_offset">ble2:u0020\u0020\u0020\u0020\u0020</string>
+    <string name="ble1_offset">ble1:\u0020\u0020\u0020\u0020\u0020</string>
+    <string name="ble2_offset">ble2:\u0020\u0020\u0020\u0020\u0020</string>
     <string name="SaveConsData">输入血压数据</string>
     <string name="PS">收缩压</string>
     <string name="PD">舒张压</string>

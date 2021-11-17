@@ -32,6 +32,7 @@ import android.view.View;
 import android.view.ViewGroup.LayoutParams;
 import android.widget.Button;
 import android.widget.EditText;
+import android.widget.HeaderViewListAdapter;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -189,48 +190,7 @@ public class ChartsActivity extends Activity implements View.OnClickListener {  
 		ProgressDialog localProgressDialog = new ProgressDialog(this);
 		this.progressDialog = localProgressDialog;
 		new DATALOADER().execute();
-
-		// 延时 1ms 每隔 100ms刷新一次图表
-		handler = new Handler() {
-			@Override
-			public void handleMessage(Message msg) {
-				// 确认连接成功后，刷新数据
-				if (CONNECT_STATA) {
-					updateChart(chart1,dataset1,series11,series12,BP_DATA_BUFFER[1],SPO2_DATA_BUFFER[1]);
-				}
-				super.handleMessage(msg);
-			}
-		};
-		task = new TimerTask() {
-			@Override
-			public void run() {
-				Message message = new Message();
-				message.what = 200;//用户自定义码,ID
-				handler.sendMessage(message);
-			}
-		};
-		timer.schedule(task, 1, 100);//p1：要操作的方法，p2：要设定延迟的时间，p3：周期的设定（ms单位）
-		// 延时 1ms 每隔500ms刷新一次曲线值
-		curveValueHandler = new Handler(){
-			@Override
-			public void handleMessage(Message msg) {
-				// 确认连接成功后，刷新数据
-				if (CONNECT_STATA) {
-					BLE1_offset.setText("BP: " + BP_DATA_BUFFER[1]);
-					BLE2_offset.setText("SpO2: " + SPO2_DATA_BUFFER[1]);
-				}
-				super.handleMessage(msg);
-			}
-		};
-		taskForCurve = new TimerTask() {
-			@Override
-			public void run() {
-				Message message = new Message();
-				message.what = 200;//用户自定义码,ID
-				curveValueHandler.sendMessage(message);
-			}
-		};
-		timer.schedule(taskForCurve, 1, 500);//p1：要操作的方法，p2：要设定延迟的时间，p3：周期的设定（ms单位）
+		initTimerTask();
 		// 连接蓝牙
 		connentBluetooth();
 	}
@@ -311,6 +271,53 @@ public class ChartsActivity extends Activity implements View.OnClickListener {  
 	private void initChart() {
 		chart1 = ChartFactory.getLineChartView(this, dataset1, renderer1);
 		layout_chart1.addView(chart1, new LayoutParams(LayoutParams.WRAP_CONTENT, 600));
+	}
+
+	/**
+	 * 初始化图表曲线周期更新和曲线数值周期更新任务
+	 */
+	private void initTimerTask(){
+		// 延时 1ms 每隔 100ms刷新一次图表
+		handler = new Handler() {
+			@Override
+			public void handleMessage(Message msg) {
+				// 确认连接成功后，刷新数据
+				if (CONNECT_STATA) {
+					updateChart(chart1,dataset1,series11,series12,BP_DATA_BUFFER[1],SPO2_DATA_BUFFER[1]);
+				}
+				super.handleMessage(msg);
+			}
+		};
+		task = new TimerTask() {
+			@Override
+			public void run() {
+				Message message = new Message();
+				message.what = 200;//用户自定义码,ID
+				handler.sendMessage(message);
+			}
+		};
+		timer.schedule(task, 1, 100);//p1：要操作的方法，p2：要设定延迟的时间，p3：周期的设定（ms单位）
+		// 延时 1ms 每隔500ms刷新一次曲线值
+		curveValueHandler = new Handler(){
+			@Override
+			public void handleMessage(Message msg) {
+				// 确认连接成功后，刷新数据
+				if (CONNECT_STATA) {
+					BLE1_offset.setText("BP: " + BP_DATA_BUFFER[1]);
+					BLE2_offset.setText("SpO2: " + SPO2_DATA_BUFFER[1]);
+				}
+				super.handleMessage(msg);
+			}
+		};
+		taskForCurve = new TimerTask() {
+			@Override
+			public void run() {
+				Message message = new Message();
+				message.what = 200;//用户自定义码,ID
+				curveValueHandler.sendMessage(message);
+			}
+		};
+		timer.schedule(taskForCurve, 1, 500);//p1：要操作的方法，p2：要设定延迟的时间，p3：周期的设定（ms单位）
 	}
 
 	@Override

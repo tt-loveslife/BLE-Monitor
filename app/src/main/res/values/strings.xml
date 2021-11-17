@@ -12,6 +12,7 @@
     <string name="ble3">BLE_3</string>
     <string name="StartRecord">开始记录</string>
     <string name="StopRecord">停止记录</string>
+    <string name="InflateRecord">充气测量</string>
     <string name="SaveData">保存数据</string>
     <string name="preSaveData">请保存数据</string>
     <string name="device_needed">选择需要连接的传感器设备</string>

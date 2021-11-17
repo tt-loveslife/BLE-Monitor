@@ -34,6 +34,7 @@ import android.widget.Button;
 import android.widget.EditText;
 import android.widget.HeaderViewListAdapter;
 import android.widget.LinearLayout;
+import android.widget.Switch;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -121,6 +122,16 @@ public class ChartsActivity extends Activity implements View.OnClickListener {  
 	boolean RECORD_STATA;//数据保存状态
 	boolean mearsure_flag = false;//开始测量标志位
 
+	/* 血压重启设备、血氧接受设备工作指令 */
+	private final byte[] BLOODSTART = {(byte) 0XFA, (byte) 0XAA, (byte) 0XAA, (byte) 0XAF,(byte) 0X00,(byte) 0X0A,(byte) 0X10,(byte) 0X1A, (byte) 0XF5,(byte) 0X5F};
+	private final byte[] BLOODSTOP =  {(byte) 0XFA, (byte) 0XAA, (byte) 0XAA, (byte) 0XAF,(byte) 0X00,(byte) 0X0A,(byte) 0X11,(byte) 0X1B, (byte) 0XF5,(byte) 0X5F};
+	private final byte[] SPO2START = {(byte) 0XFA, (byte) 0XAA, (byte) 0XAA, (byte) 0XFA,(byte) 0X00,(byte) 0X0A,(byte) 0X10,(byte) 0X1A, (byte) 0XF5,(byte) 0X5F};
+	private final byte[] SPO2STOP =  {(byte) 0XFA, (byte) 0XAA, (byte) 0XAA, (byte) 0XFA,(byte) 0X00,(byte) 0X0A,(byte) 0X11,(byte) 0X1B, (byte) 0XF5,(byte) 0X5F};
+
+	/* 三个设备的物理Mac地址 */
+	private final String BLOODPRESSUREADDR = "E7:4E:AD:39:EC:EC";
+	private final String GASPRESSUREADDR = "CA:CE:1D:C0:97:C8";
+	private final String CUFFPRESSUREADDR = "74:8B:34:00:09:0D";
 	/* 蓝牙数据接受容器 */
 	Long[] BP_DATA_BUFFER = new Long[2];	//接收数据buffer，更新图表用
 	Long[] SPO2_DATA_BUFFER = new Long[2];	//接收数据buffer，更新图表用
@@ -145,6 +156,8 @@ public class ChartsActivity extends Activity implements View.OnClickListener {  
 	private BluetoothAdapter bluetoothAdapter;   //蓝牙适配器
 	private ArrayList<String> connectDeviceMacList; //需要连接的mac设备集合
 	private ArrayList<String> connectDeviceNameList; //需要连接的mac设备集合
+	private BluetoothGattCharacteristic notifyCharacteristic;
+	private BluetoothGattCharacteristic writeCharacteristic;
 	ArrayList<BluetoothGatt> gattArrayList; //设备gatt集合
 	HashMap<BluetoothGatt, BluetoothGattCharacteristic> bluetoothHashMap;
 	private final int REQUEST_CODE_PERMISSION = 1; // 权限请求码  用于回调
@@ -297,6 +310,7 @@ public class ChartsActivity extends Activity implements View.OnClickListener {  
 			}
 		};
 		timer.schedule(task, 1, 100);//p1：要操作的方法，p2：要设定延迟的时间，p3：周期的设定（ms单位）
+
 		// 延时 1ms 每隔500ms刷新一次曲线值
 		curveValueHandler = new Handler(){
 			@Override
@@ -325,6 +339,8 @@ public class ChartsActivity extends Activity implements View.OnClickListener {  
 		switch (v.getId()) {
 			/*开始记录*/
 			case R.id.startButton1:
+				// 向 健拓设备发送开始测量信号
+				startInflating();
 				//将数据清零，重新开始记录
 				BP_Record_Data.clear();
 				SPO2_Record_Data.clear();
@@ -334,6 +350,7 @@ public class ChartsActivity extends Activity implements View.OnClickListener {  
 
 			/*停止记录*/
 			case R.id.stopButton1:
+				stopBloodAndSPO2();
 				if (startrecord_flag && (!BP_Record_Data.isEmpty() || !SPO2_Record_Data.isEmpty())) {
 					RECORD_STATA = false;
 					savebutton.setText(this.getString(R.string.preSaveData));//提示保存数据
@@ -583,22 +600,43 @@ public class ChartsActivity extends Activity implements View.OnClickListener {  
 				//Logger.i("数据接受回调");
 				dealCallDatas(gatt, characteristic);
 			}
+
+			@Override
+			public void onServicesDiscovered(BluetoothGatt gatt, int status) {
+				//mBluetoothGatt = gatt;
+				notifyCharacteristic = gatt.getService(UUID.fromString("0000fff0-0000-1000-8000-00805f9b34fb")).getCharacteristic(UUID.fromString("0000fff1-0000-1000-8000-00805f9b34fb"));
+				writeCharacteristic = gatt.getService(UUID.fromString("0000fff0-0000-1000-8000-00805f9b34fb")).getCharacteristic(UUID.fromString("0000fff2-0000-1000-8000-00805f9b34fb"));
+				bluetoothHashMap.put(gatt, writeCharacteristic);
+			}
+
+			@Override
+			public void onConnectionStateChange(BluetoothGatt gatt, int status, int newState){
+				if(newState == BluetoothProfile.STATE_CONNECTED){
+					gatt.discoverServices();
+				}
+			}
+
+			@Override
+			public void onCharacteristicWrite(BluetoothGatt gatt, BluetoothGattCharacteristic characteristic, int status) {
+				super.onCharacteristicWrite(gatt, characteristic, status);
+				Logger.i("数据发送");
+			}
 		});
 		//1.服务UUID
-		multiConnectManager.setServiceUUID("6F400001-B5A3-F393-E0A9-E50E24DCCA9E");
+		multiConnectManager.setServiceUUID("0000fff0-0000-1000-8000-00805f9b34fb");
 		//2.clean history descriptor data（清除历史订阅读写通知）
 		multiConnectManager.cleanSubscribeData();
 		//3.add subscribe params（读写和通知）
 		multiConnectManager.addBluetoothSubscribeData(
 				new BluetoothSubScribeData.Builder().
-						setDescriptorWrite(UUID.fromString("6F400001-B5A3-F393-E0A9-E50E24DCCA9E"), UUID.fromString(GattAttributeResolver.CLIENT_CHARACTERISTIC_CONFIG), BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE).build());//特性UUID启用CCCD
+						setDescriptorWrite(UUID.fromString("0000fff0-0000-1000-8000-00805f9b34fb"), UUID.fromString(GattAttributeResolver.CLIENT_CHARACTERISTIC_CONFIG), BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE).build());//特性UUID启用CCCD
 		multiConnectManager.addBluetoothSubscribeData(
 				new BluetoothSubScribeData.Builder().
-						setDescriptorWrite(UUID.fromString("6F400001-B5A3-F393-E0A9-E50E24DCCA9E"), UUID.fromString(GattAttributeResolver.CLIENT_CHARACTERISTIC_CONFIG), BluetoothGattDescriptor.ENABLE_INDICATION_VALUE).build());
+						setDescriptorWrite(UUID.fromString("0000fff0-0000-1000-8000-00805f9b34fb"), UUID.fromString(GattAttributeResolver.CLIENT_CHARACTERISTIC_CONFIG), BluetoothGattDescriptor.ENABLE_INDICATION_VALUE).build());
 		//还有读写descriptor
 		multiConnectManager.addBluetoothSubscribeData(
 				//new BluetoothSubScribeData.Builder().setCharacteristicNotify(UUID.fromString("0000e1d3-0000-1000-8000-00805f9b34fb")).build());//特性UUID
-				new BluetoothSubScribeData.Builder().setCharacteristicNotify(UUID.fromString("6F400003-B5A3-F393-E0A9-E50E24DCCA9E")).build());
+				new BluetoothSubScribeData.Builder().setCharacteristicNotify(UUID.fromString("0000fff1-0000-1000-8000-00805f9b34fb")).build());
 		//start descriptor(注意，在使用时当回调onServicesDiscovered成功时会自动调用该方法，所以只需要在连接之前完成1,3步即可)
 		for (int i = 0; i < gattArrayList.size(); i++) {
 			multiConnectManager.startSubscribe(gattArrayList.get(i));
@@ -606,6 +644,7 @@ public class ChartsActivity extends Activity implements View.OnClickListener {  
 		multiConnectManager.startConnect();
 
 	}
+
 
 	/**
 	 * 处理回调的数据
@@ -619,30 +658,71 @@ public class ChartsActivity extends Activity implements View.OnClickListener {  
 
 		Logger.i("数据长度：" + value.length);
 		Logger.i("设备地址：" + gatt.getDevice().getAddress());
-		if(value.length == 8){//发来的是血压数据
-			// 缓存区，更新时从BP_DATA_BUFFER里取
-			BP_DATA_BUFFER[0] = System.currentTimeMillis();
-			BP_DATA_BUFFER[1] = Long.valueOf(((((short) value[0]) << 8) | ((short) value[1] & 0xff)));
-			BP_DATA_BUFFER[1] = BP_DATA_BUFFER[1] * 3600L / 1024L;
-			Logger.i("时间:" + BP_DATA_BUFFER[0] + "脉搏数据:" + BP_DATA_BUFFER[1]);
-			if (RECORD_STATA) {
-				ArrayList<Long> list = new ArrayList<>(BP_DATA_BUFFER.length);
-				Collections.addAll(list, BP_DATA_BUFFER);
-				BP_Record_Data.add(list);
-			}
-
-		}else if(value.length == 6){//发来的是血样数据
-			SPO2_DATA_BUFFER[0] = System.currentTimeMillis();
-			SPO2_DATA_BUFFER[1] = Long.valueOf(((((short) value[0]) << 8) | ((short) value[1] & 0xff)));
-			SPO2_DATA_BUFFER[1] = SPO2_DATA_BUFFER[1] * 3600L / 1024L;
-			Logger.i("时间:" + SPO2_DATA_BUFFER[0] + "血压数据:" +SPO2_DATA_BUFFER[1]);
-			if (RECORD_STATA) {
-				ArrayList<Long> list = new ArrayList<>(SPO2_DATA_BUFFER.length);
-				Collections.addAll(list, SPO2_DATA_BUFFER);
-				SPO2_Record_Data.add(list);
-			}
+		switch(gatt.getDevice().getAddress()){
+			case GASPRESSUREADDR:
+				// 缓存区，更新时从BP_DATA_BUFFER里取
+				BP_DATA_BUFFER[0] = System.currentTimeMillis();
+				BP_DATA_BUFFER[1] = Long.valueOf(((((short) value[0]) << 8) | ((short) value[1] & 0xff)));
+				BP_DATA_BUFFER[1] = BP_DATA_BUFFER[1] * 3600L / 1024L;
+				Logger.i("时间:" + BP_DATA_BUFFER[0] + "脉搏数据:" + BP_DATA_BUFFER[1]);
+				if (RECORD_STATA) {
+					ArrayList<Long> list = new ArrayList<>(BP_DATA_BUFFER.length);
+					Collections.addAll(list, BP_DATA_BUFFER);
+					BP_Record_Data.add(list);
+				}
+				break;
+			case BLOODPRESSUREADDR:
+				SPO2_DATA_BUFFER[0] = System.currentTimeMillis();
+				SPO2_DATA_BUFFER[1] = Long.valueOf(((((short) value[0]) << 8) | ((short) value[1] & 0xff)));
+				SPO2_DATA_BUFFER[1] = SPO2_DATA_BUFFER[1] * 3600L / 1024L;
+				Logger.i("时间:" + SPO2_DATA_BUFFER[0] + "血压数据:" +SPO2_DATA_BUFFER[1]);
+				if (RECORD_STATA) {
+					ArrayList<Long> list = new ArrayList<>(SPO2_DATA_BUFFER.length);
+					Collections.addAll(list, SPO2_DATA_BUFFER);
+					SPO2_Record_Data.add(list);
+				}
+				break;
+			default:
+				break;
 		}
 		EventBus.getDefault().post(new RefreshDatas()); // 发送消息，更新UI 显示数据 ④发送事件
+	}
+
+	private void startBloodAndSPO2(){
+		for(Map.Entry<BluetoothGatt, BluetoothGattCharacteristic> entry:bluetoothHashMap.entrySet()){
+			entry.getValue().setValue(SPO2START);
+			entry.getKey().writeCharacteristic(entry.getValue());
+			try {
+				Thread.sleep(200);
+				entry.getValue().setValue(BLOODSTART);
+				while(entry.getKey().writeCharacteristic(entry.getValue()));
+			} catch (InterruptedException e) {
+				e.printStackTrace();
+			}
+		}
+	}
+
+	private void startInflating(){
+		for(Map.Entry<BluetoothGatt, BluetoothGattCharacteristic> entry:bluetoothHashMap.entrySet()){
+			if (entry.getKey().getDevice().getAddress().equals(CUFFPRESSUREADDR)){
+				entry.getValue().setValue(SPO2START);
+				entry.getKey().writeCharacteristic(entry.getValue());
+			}
+		}
+	}
+
+	private void stopBloodAndSPO2(){
+		for(Map.Entry<BluetoothGatt, BluetoothGattCharacteristic> entry:bluetoothHashMap.entrySet()){
+			entry.getValue().setValue(SPO2STOP);
+			entry.getKey().writeCharacteristic(entry.getValue());
+			try {
+				Thread.sleep(200);
+				entry.getValue().setValue(BLOODSTOP);
+				while(entry.getKey().writeCharacteristic(entry.getValue()));
+			} catch (InterruptedException e) {
+				e.printStackTrace();
+			}
+		}
 	}
 
 	public void onEventMainThread(RefreshDatas event) { //   ③处理事件

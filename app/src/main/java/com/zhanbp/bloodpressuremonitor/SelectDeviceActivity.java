@@ -57,8 +57,6 @@ public class SelectDeviceActivity extends Activity implements View.OnClickListen
         initView();
         initEvent();
         initBle();
-
-
     }
 
     /**
@@ -66,7 +64,6 @@ public class SelectDeviceActivity extends Activity implements View.OnClickListen
      */
     private void initBle() {
         scanManager = BleManager.getScanManager(this);
-
         scanManager.setScanOverListener(new ScanOverListener() {
             @Override
             public void onScanOver() {
@@ -142,7 +139,6 @@ public class SelectDeviceActivity extends Activity implements View.OnClickListen
         switch (v.getId()){
             case R.id.btnScan:
                 //开始 扫描
-//                scanManager.startCycleScan(); //不会立即开始，可能会延时
                 scanManager.startScanNow(); //立即开始扫描
                 break;
 

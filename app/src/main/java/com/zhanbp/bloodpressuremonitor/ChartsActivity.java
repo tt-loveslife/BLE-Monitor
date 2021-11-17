@@ -91,6 +91,7 @@ public class ChartsActivity extends Activity implements View.OnClickListener {  
 	/*组件相关*/
 	private LinearLayout layout_chart1;
 	private Button startbutton1;
+	private Button inflatebutton;
 	private Button stopbutton;
 	private Button savebutton;
 
@@ -125,8 +126,6 @@ public class ChartsActivity extends Activity implements View.OnClickListener {  
 	/* 血压重启设备、血氧接受设备工作指令 */
 	private final byte[] BLOODSTART = {(byte) 0XFA, (byte) 0XAA, (byte) 0XAA, (byte) 0XAF,(byte) 0X00,(byte) 0X0A,(byte) 0X10,(byte) 0X1A, (byte) 0XF5,(byte) 0X5F};
 	private final byte[] BLOODSTOP =  {(byte) 0XFA, (byte) 0XAA, (byte) 0XAA, (byte) 0XAF,(byte) 0X00,(byte) 0X0A,(byte) 0X11,(byte) 0X1B, (byte) 0XF5,(byte) 0X5F};
-	private final byte[] SPO2START = {(byte) 0XFA, (byte) 0XAA, (byte) 0XAA, (byte) 0XFA,(byte) 0X00,(byte) 0X0A,(byte) 0X10,(byte) 0X1A, (byte) 0XF5,(byte) 0X5F};
-	private final byte[] SPO2STOP =  {(byte) 0XFA, (byte) 0XAA, (byte) 0XAA, (byte) 0XFA,(byte) 0X00,(byte) 0X0A,(byte) 0X11,(byte) 0X1B, (byte) 0XF5,(byte) 0X5F};
 
 	/* 三个设备的物理Mac地址 */
 	private final String BLOODPRESSUREADDR = "E7:4E:AD:39:EC:EC";
@@ -246,6 +245,7 @@ public class ChartsActivity extends Activity implements View.OnClickListener {  
 		layout_chart1 = (LinearLayout) findViewById(R.id.linearlayout_chart1);
 		// 初始化按钮
 		savebutton = (Button) this.findViewById(R.id.saveButton1);
+		inflatebutton = (Button) this.findViewById(R.id.inflateButton1);
 		startbutton1 = (Button) this.findViewById(R.id.startButton1);
 		stopbutton = (Button) this.findViewById(R.id.stopButton1);
 		// 初始化曲线值
@@ -266,6 +266,7 @@ public class ChartsActivity extends Activity implements View.OnClickListener {  
 		startbutton1.setOnClickListener(this);
 		stopbutton.setOnClickListener(this);
 		savebutton.setOnClickListener(this);
+		inflatebutton.setOnClickListener(this);
 	}
 
 	/**
@@ -339,6 +340,15 @@ public class ChartsActivity extends Activity implements View.OnClickListener {  
 		switch (v.getId()) {
 			/*开始记录*/
 			case R.id.startButton1:
+				//将数据清零，重新开始记录
+				BP_Record_Data.clear();
+				SPO2_Record_Data.clear();
+				RECORD_STATA = true;//记录数据标志位
+				savebutton.setText(this.getString(R.string.SaveData));//重置保存按钮
+				break;
+
+			/* 延时充气测量 */
+			case R.id.inflateButton1:
 				// 向 健拓设备发送开始测量信号
 				startInflating();
 				//将数据清零，重新开始记录
@@ -705,7 +715,7 @@ public class ChartsActivity extends Activity implements View.OnClickListener {  
 	private void startInflating(){
 		for(Map.Entry<BluetoothGatt, BluetoothGattCharacteristic> entry:bluetoothHashMap.entrySet()){
 			if (entry.getKey().getDevice().getAddress().equals(CUFFPRESSUREADDR)){
-				entry.getValue().setValue(SPO2START);
+				entry.getValue().setValue(BLOODSTART);
 				entry.getKey().writeCharacteristic(entry.getValue());
 			}
 		}

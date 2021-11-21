@@ -323,7 +323,7 @@ public class ChartsActivity extends Activity implements View.OnClickListener {  
 				handler.sendMessage(message);
 			}
 		};
-		timer.schedule(task, 1, 200);//p1：要操作的方法，p2：要设定延迟的时间，p3：周期的设定（ms单位）
+		timer.schedule(task, 1, 150);//p1：要操作的方法，p2：要设定延迟的时间，p3：周期的设定（ms单位）
 
 		// 延时 1ms 每隔500ms刷新一次曲线值
 		curveValueHandler = new Handler(){
@@ -345,7 +345,7 @@ public class ChartsActivity extends Activity implements View.OnClickListener {  
 				curveValueHandler.sendMessage(message);
 			}
 		};
-		timer.schedule(taskForCurve, 1, 500);//p1：要操作的方法，p2：要设定延迟的时间，p3：周期的设定（ms单位）
+		timer.schedule(taskForCurve, 1, 550);//p1：要操作的方法，p2：要设定延迟的时间，p3：周期的设定（ms单位）
 
 		// 延时充气： 点击后 1min 开始充气
 		inflateHandler = new Handler(){
@@ -669,7 +669,19 @@ public class ChartsActivity extends Activity implements View.OnClickListener {  
 			public void onCharacteristicChanged(BluetoothGatt gatt, BluetoothGattCharacteristic characteristic) { //Characteristic 改变，数据接收
 				super.onCharacteristicChanged(gatt, characteristic);
 				//Logger.i("数据接受回调");
-				dealCallDatas(gatt, characteristic);
+				switch(gatt.getDevice().getAddress()){
+					case GASPRESSUREADDR:
+						dealGPData(characteristic);
+						break;
+					case BLOODPRESSUREADDR:
+						dealBPData(characteristic);
+						break;
+					case CUFFPRESSUREADDR:
+						dealCPData(characteristic);
+						break;
+					default:
+						break;
+				}
 			}
 
 			@Override
@@ -716,60 +728,64 @@ public class ChartsActivity extends Activity implements View.OnClickListener {  
 
 	}
 
-
 	/**
-	 * 处理回调的数据
-	 *
-	 * @param gatt
-	 * @param characteristic
+	 * 处理气箱数据
+	 * @param characteristic：蓝牙特征，携带相关数据
 	 */
-	private void dealCallDatas(BluetoothGatt gatt, BluetoothGattCharacteristic characteristic) {
-		// 获取上传数据
+	private void dealGPData(BluetoothGattCharacteristic characteristic){
 		byte[] value = characteristic.getValue();
-
-		Logger.i("数据长度：" + value.length);
-		Logger.i("设备地址：" + gatt.getDevice().getAddress());
-		switch(gatt.getDevice().getAddress()){
-			case GASPRESSUREADDR:
-				GP_DATA_BUFFER[0] = System.currentTimeMillis();
-				GP_DATA_BUFFER[1] = Long.valueOf(((((short) value[0]) << 8) | ((short) value[1] & 0xff)));
-				GP_DATA_BUFFER[1] = GP_DATA_BUFFER[1] * 3600L / 1024L;
-				Logger.i("时间:" + GP_DATA_BUFFER[0] + "气箱数据:" +GP_DATA_BUFFER[1]);
-				if (RECORD_STATA) {
-					ArrayList<Long> list = new ArrayList<>(GP_DATA_BUFFER.length);
-					Collections.addAll(list, GP_DATA_BUFFER);
-					GP_Record_Data.add(list);
-				}
-				break;
-			case BLOODPRESSUREADDR:
-				// 缓存区，更新时从BP_DATA_BUFFER里取
-				BP_DATA_BUFFER[0] = System.currentTimeMillis();
-				BP_DATA_BUFFER[1] = Long.valueOf(((((short) value[0]) << 8) | ((short) value[1] & 0xff)));
-				BP_DATA_BUFFER[1] = BP_DATA_BUFFER[1] * 3600L / 1024L;
-				Logger.i("时间:" + BP_DATA_BUFFER[0] + "脉搏数据:" + BP_DATA_BUFFER[1]);
-				if (RECORD_STATA) {
-					ArrayList<Long> list = new ArrayList<>(BP_DATA_BUFFER.length);
-					Collections.addAll(list, BP_DATA_BUFFER);
-					BP_Record_Data.add(list);
-				}
-				break;
-			case CUFFPRESSUREADDR:
-				if (value.length == 12) {
-					CP_DATA_BUFFER[0] = System.currentTimeMillis();
-					CP_DATA_BUFFER[1] = Long.valueOf(((((short) value[7]) << 8) | ((short) value[8] & 0xff)));
-					Logger.i("时间:" + CP_DATA_BUFFER[0] + "袖带数据:" + CP_DATA_BUFFER[1]);
-					if (RECORD_STATA) {
-						ArrayList<Long> list = new ArrayList<>(CP_DATA_BUFFER.length);
-						Collections.addAll(list, CP_DATA_BUFFER);
-						CP_Record_Data.add(list);
-					}
-				}
-			default:
-				break;
+		GP_DATA_BUFFER[0] = System.currentTimeMillis();
+		GP_DATA_BUFFER[1] = Long.valueOf(((((short) value[0]) << 8) | ((short) value[1] & 0xff)));
+		GP_DATA_BUFFER[1] = GP_DATA_BUFFER[1] * 3600L / 1024L;
+		Logger.i("时间:" + GP_DATA_BUFFER[0] + "气箱数据:" +GP_DATA_BUFFER[1]);
+		if (RECORD_STATA) {
+			ArrayList<Long> list = new ArrayList<>(GP_DATA_BUFFER.length);
+			Collections.addAll(list, GP_DATA_BUFFER);
+			GP_Record_Data.add(list);
 		}
 		EventBus.getDefault().post(new RefreshDatas()); // 发送消息，更新UI 显示数据 ④发送事件
 	}
 
+	/**
+	 * 处理脉搏数据
+	 * @param characteristic：蓝牙特征，携带相关数据
+	 */
+	private void dealBPData(BluetoothGattCharacteristic characteristic){
+		byte[] value = characteristic.getValue();
+		BP_DATA_BUFFER[0] = System.currentTimeMillis();
+		BP_DATA_BUFFER[1] = Long.valueOf(((((short) value[0]) << 8) | ((short) value[1] & 0xff)));
+		BP_DATA_BUFFER[1] = BP_DATA_BUFFER[1] * 3600L / 1024L;
+		Logger.i("时间:" + BP_DATA_BUFFER[0] + "脉搏数据:" + BP_DATA_BUFFER[1]);
+		if (RECORD_STATA) {
+			ArrayList<Long> list = new ArrayList<>(BP_DATA_BUFFER.length);
+			Collections.addAll(list, BP_DATA_BUFFER);
+			BP_Record_Data.add(list);
+		}
+		EventBus.getDefault().post(new RefreshDatas()); // 发送消息，更新UI 显示数据 ④发送事件
+	}
+
+	/**
+	 * 处理袖带数据
+	 * @param characteristic：蓝牙特征，携带相关数据
+	 */
+	private void dealCPData(BluetoothGattCharacteristic characteristic){
+		byte[] value = characteristic.getValue();
+		if (value.length == 12) {
+			CP_DATA_BUFFER[0] = System.currentTimeMillis();
+			CP_DATA_BUFFER[1] = Long.valueOf(((((short) value[7]) << 8) | ((short) value[8] & 0xff)));
+			Logger.i("时间:" + CP_DATA_BUFFER[0] + "袖带数据:" + CP_DATA_BUFFER[1]);
+			if (RECORD_STATA) {
+				ArrayList<Long> list = new ArrayList<>(CP_DATA_BUFFER.length);
+				Collections.addAll(list, CP_DATA_BUFFER);
+				CP_Record_Data.add(list);
+			}
+		}
+		EventBus.getDefault().post(new RefreshDatas()); // 发送消息，更新UI 显示数据 ④发送事件
+	}
+
+	/**
+	 * 给健拓设备发送开始工作信号
+	 */
 	private void startInflating(){
 		for(Map.Entry<BluetoothGatt, BluetoothGattCharacteristic> entry:bluetoothHashMap.entrySet()){
 			if (entry.getKey().getDevice().getAddress().equals(CUFFPRESSUREADDR)){
@@ -779,6 +795,9 @@ public class ChartsActivity extends Activity implements View.OnClickListener {  
 		}
 	}
 
+	/**
+	 * 给健拓设备发送停止工作信号
+	 */
 	private void stopBloodAndSPO2(){
 		for(Map.Entry<BluetoothGatt, BluetoothGattCharacteristic> entry:bluetoothHashMap.entrySet()){
 			if (entry.getKey().getDevice().getAddress().equals(CUFFPRESSUREADDR)){

@@ -104,19 +104,23 @@ public class ChartsActivity extends Activity implements View.OnClickListener {  
 	private Timer timer = new Timer();
 	private TimerTask task;
 	private TimerTask taskForCurve;
+	private TimerTask taskForInflate;
 
 	private ProgressDialog progressDialog;
 
 	/*图表相关*/
 	private Handler handler;	//渲染器
 	private Handler curveValueHandler;
+	private Handler inflateHandler;
 	private GraphicalView chart1;
 	private XYMultipleSeriesRenderer renderer1;
 	private XYMultipleSeriesDataset dataset1;	//一个图的数据组
 	private TimeSeries series11;	//纵轴数据
 	private TimeSeries series12;
+	private TimeSeries series13;
 	private TimeSeries seriesDC1;	//横轴数据
 	private TimeSeries seriesDC2;
+	private TimeSeries seriesDC3;
 
 	/*数据相关*/
 	boolean CONNECT_STATA;//连接状态
@@ -132,17 +136,20 @@ public class ChartsActivity extends Activity implements View.OnClickListener {  
 	private final String GASPRESSUREADDR = "CA:CE:1D:C0:97:C8";
 	private final String CUFFPRESSUREADDR = "74:8B:34:00:09:0D";
 	/* 蓝牙数据接受容器 */
-	Long[] BP_DATA_BUFFER = new Long[2];	//接收数据buffer，更新图表用
-	Long[] SPO2_DATA_BUFFER = new Long[2];	//接收数据buffer，更新图表用
+	Long[] BP_DATA_BUFFER = new Long[2];
+	Long[] GP_DATA_BUFFER = new Long[2];
+	Long[] CP_DATA_BUFFER = new Long[2];
 	int[] ycache = new int[201];	//Y缓存，更新用
 
 	/* Excel 图表列标题 */
-	private String[] title1 = {"时间","PPG"};
+	private String[] title2 = {"时间","袖带压力"};
+	private String[] title1 = {"时间","气箱压力"};
 	private String[] title0 = {"时间","血压"};
 
 	/* 数据DAO容器 */
-	private ArrayList<ArrayList<Long>> BP_Record_Data = new ArrayList();//数据集,保存记录用(0)时间 (1)压力值
-	private ArrayList<ArrayList<Long>> SPO2_Record_Data = new ArrayList();//数据集,保存记录用(0)时间 (1)血氧 (3)脉率 (4)灌注指数 （5）柱状图 （6）波形图
+	private ArrayList<ArrayList<Long>> CP_Record_Data;//数据集,保存记录用(0)时间 (1)压力值
+	private ArrayList<ArrayList<Long>> BP_Record_Data;//数据集,保存记录用(0)时间 (1)压力值
+	private ArrayList<ArrayList<Long>> GP_Record_Data;//数据集,保存记录用(0)时间 (1)压力值
 
 	/* 保存Excel相关信息 */
 	private String ExcelName;
@@ -223,17 +230,22 @@ public class ChartsActivity extends Activity implements View.OnClickListener {  
 			BP_DATA_BUFFER[j] = Long.valueOf(0);
 		}
 		BP_Record_Data = new ArrayList<>();
-		for (int j = 0; j < SPO2_DATA_BUFFER.length; j++) {
-			SPO2_DATA_BUFFER[j] = Long.valueOf(0);
+		for (int j = 0; j < GP_DATA_BUFFER.length; j++) {
+			GP_DATA_BUFFER[j] = Long.valueOf(0);
 		}
-		SPO2_Record_Data = new ArrayList<>();
-
+		GP_Record_Data = new ArrayList<>();
+		for (int j = 0; j < CP_DATA_BUFFER.length; j++) {
+			CP_DATA_BUFFER[j] = Long.valueOf(0);
+		}
+		CP_Record_Data = new ArrayList<>();
 		seriesDC1 = new TimeSeries("time1");
 		seriesDC2 = new TimeSeries("time2");
+		seriesDC3 = new TimeSeries("time3");
 		int nr = 201;                                        //200个数
 		for (int k = 0; k < nr; k++) {
 			seriesDC1.add(k, 0);    //初始化为0
 			seriesDC2.add(k, 0);
+			seriesDC3.add(k, 0);
 		}
 	}
 
@@ -273,10 +285,11 @@ public class ChartsActivity extends Activity implements View.OnClickListener {  
 	 * 初始化横坐标曲线
 	 */
 	private void initRenderandDataset() {
-		renderer1 = getDemoRenderer(new XYMultipleSeriesRenderer(2));
-		series11 = new TimeSeries("BP");    //
-		series12 = new TimeSeries("SPO2");
-		dataset1 = getDateDemoDataset(new XYMultipleSeriesDataset(), series11, series12);
+		renderer1 = getDemoRenderer(new XYMultipleSeriesRenderer(3));
+		series11 = new TimeSeries("BP");
+		series12 = new TimeSeries("GP");
+		series13 = new TimeSeries("CP");
+		dataset1 = getDateDemoDataset(new XYMultipleSeriesDataset(), series11, series12, series13);
 	}
 
 	/**
@@ -297,7 +310,7 @@ public class ChartsActivity extends Activity implements View.OnClickListener {  
 			public void handleMessage(Message msg) {
 				// 确认连接成功后，刷新数据
 				if (CONNECT_STATA) {
-					updateChart(chart1,dataset1,series11,series12,BP_DATA_BUFFER[1],SPO2_DATA_BUFFER[1]);
+					updateChart(chart1,dataset1,series11,series12,series13,BP_DATA_BUFFER[1],GP_DATA_BUFFER[1], CP_DATA_BUFFER[1]);
 				}
 				super.handleMessage(msg);
 			}
@@ -310,7 +323,7 @@ public class ChartsActivity extends Activity implements View.OnClickListener {  
 				handler.sendMessage(message);
 			}
 		};
-		timer.schedule(task, 1, 100);//p1：要操作的方法，p2：要设定延迟的时间，p3：周期的设定（ms单位）
+		timer.schedule(task, 1, 200);//p1：要操作的方法，p2：要设定延迟的时间，p3：周期的设定（ms单位）
 
 		// 延时 1ms 每隔500ms刷新一次曲线值
 		curveValueHandler = new Handler(){
@@ -319,7 +332,7 @@ public class ChartsActivity extends Activity implements View.OnClickListener {  
 				// 确认连接成功后，刷新数据
 				if (CONNECT_STATA) {
 					BLE1_offset.setText("BP: " + BP_DATA_BUFFER[1]);
-					BLE2_offset.setText("SpO2: " + SPO2_DATA_BUFFER[1]);
+					BLE2_offset.setText("SpO2: " + GP_DATA_BUFFER[1]);
 				}
 				super.handleMessage(msg);
 			}
@@ -333,6 +346,24 @@ public class ChartsActivity extends Activity implements View.OnClickListener {  
 			}
 		};
 		timer.schedule(taskForCurve, 1, 500);//p1：要操作的方法，p2：要设定延迟的时间，p3：周期的设定（ms单位）
+
+		// 延时充气： 点击后 1min 开始充气
+		inflateHandler = new Handler(){
+			@Override
+			public void handleMessage(Message msg) {
+				// 确认连接成功后，刷新数据
+				startInflating();
+				super.handleMessage(msg);
+			}
+		};
+		taskForInflate = new TimerTask() {
+			@Override
+			public void run() {
+				Message message = new Message();
+				message.what = 200;//用户自定义码,ID
+				inflateHandler.sendMessage(message);
+			}
+		};
 	}
 
 	@Override
@@ -342,7 +373,8 @@ public class ChartsActivity extends Activity implements View.OnClickListener {  
 			case R.id.startButton1:
 				//将数据清零，重新开始记录
 				BP_Record_Data.clear();
-				SPO2_Record_Data.clear();
+				GP_Record_Data.clear();
+				CP_Record_Data.clear();
 				RECORD_STATA = true;//记录数据标志位
 				savebutton.setText(this.getString(R.string.SaveData));//重置保存按钮
 				break;
@@ -350,10 +382,15 @@ public class ChartsActivity extends Activity implements View.OnClickListener {  
 			/* 延时充气测量 */
 			case R.id.inflateButton1:
 				// 向 健拓设备发送开始测量信号
-				startInflating();
+				try{
+					timer.schedule(taskForInflate, 60 * 1000);
+				}catch (Exception e){
+					e.printStackTrace();
+				}
 				//将数据清零，重新开始记录
 				BP_Record_Data.clear();
-				SPO2_Record_Data.clear();
+				GP_Record_Data.clear();
+				CP_Record_Data.clear();
 				RECORD_STATA = true;//记录数据标志位
 				savebutton.setText(this.getString(R.string.SaveData));//重置保存按钮
 				break;
@@ -361,7 +398,7 @@ public class ChartsActivity extends Activity implements View.OnClickListener {  
 			/*停止记录*/
 			case R.id.stopButton1:
 				stopBloodAndSPO2();
-				if (startrecord_flag && (!BP_Record_Data.isEmpty() || !SPO2_Record_Data.isEmpty())) {
+				if (startrecord_flag && (!BP_Record_Data.isEmpty() || !GP_Record_Data.isEmpty() || !CP_Record_Data.isEmpty())) {
 					RECORD_STATA = false;
 					savebutton.setText(this.getString(R.string.preSaveData));//提示保存数据
 				}
@@ -369,7 +406,7 @@ public class ChartsActivity extends Activity implements View.OnClickListener {  
 
 			/*保存数据*/
 			case R.id.saveButton1:
-				if (!BP_Record_Data.isEmpty() || !SPO2_Record_Data.isEmpty()) {
+				if (!BP_Record_Data.isEmpty() || !GP_Record_Data.isEmpty() || !CP_Record_Data.isEmpty()) {
 					setExcelNameAndSave();//弹窗取名//保存
 				} else {
 					Toast.makeText(this, "未记录任何数据", Toast.LENGTH_LONG).show();
@@ -413,9 +450,10 @@ public class ChartsActivity extends Activity implements View.OnClickListener {  
 		File xlsFile = new File(filepath, fileName);//然后再创建文件的File对象    //文件和文件夹必须分开创建！
 		String absolutePath = xlsFile.getAbsolutePath();
 		if (absolutePath != null) {
-			ExcelIO.initExcel(xlsFile, absolutePath, title0, title1);//
+			ExcelIO.initExcel(xlsFile, absolutePath, title0, title1, title2);//
 			ExcelIO.writeObjListToExcel(BP_Record_Data,absolutePath, this, 0);
-			ExcelIO.writeObjListToExcel(SPO2_Record_Data, absolutePath, this, 1);
+			ExcelIO.writeObjListToExcel(GP_Record_Data, absolutePath, this, 1);
+			ExcelIO.writeObjListToExcel(CP_Record_Data, absolutePath, this, 2);
 			savebutton.setText(this.getString(R.string.SaveData));//重置保存按钮
 		}
 	}
@@ -429,13 +467,15 @@ public class ChartsActivity extends Activity implements View.OnClickListener {  
 	 * @param addYY1：添加的一个数据
 	 * @param addYY2：添加的一个数据
 	 */
-	private void updateChart(GraphicalView chart, XYMultipleSeriesDataset Dataset, TimeSeries series1, TimeSeries series2, long addYY1, long addYY2) {
+	private void updateChart(GraphicalView chart, XYMultipleSeriesDataset Dataset, TimeSeries series1, TimeSeries series2, TimeSeries series3, long addYY1, long addYY2, long addYY3) {
 		boolean s1 = false;
 		int length = series1.getItemCount();
 		int length2 = series2.getItemCount();
+		int length3 = series3.getItemCount();
 
 		if (length >= 201) length = 201;
 		if (length2 >= 201) length2 = 201;
+		if (length3 >= 201) length2 = 201;
 
 		for (int i = 0; i < length; i++) {                //数据存入缓存
 			ycache[i] = (int) series1.getY(i);
@@ -454,10 +494,21 @@ public class ChartsActivity extends Activity implements View.OnClickListener {  
 			series2.add(k, ycache[k + 1]);
 		}
 		series2.add(length2 - 1, addYY2);                //加入新数据
+		///////////////////////////////////
+		for (int i = 0; i < length3; i++) {                //数据存入缓存
+			ycache[i] = (int) series3.getY(i);
+		}
+		series3.clear();                                //清除数据
+		for (int k = 0; k < length3 - 1; k++) {                //加入缓存中的数据
+			series3.add(k, ycache[k + 1]);
+		}
+		series3.add(length3 - 1, addYY3);                //加入新数据
 		Dataset.removeSeries(series1);                //更新数据组
 		Dataset.addSeries(series1);
 		Dataset.removeSeries(series2);
 		Dataset.addSeries(series2);
+		Dataset.removeSeries(series3);
+		Dataset.addSeries(series3);
 		chart.invalidate();
 	}
 
@@ -467,7 +518,7 @@ public class ChartsActivity extends Activity implements View.OnClickListener {  
 	 * @return
 	 */
 	private XYMultipleSeriesRenderer getDemoRenderer(XYMultipleSeriesRenderer renderer) {
-		renderer.setChartTitle("BP&PPG");//标题
+		renderer.setChartTitle("BP Monitor");//标题
 		renderer.setChartTitleTextSize(45);
 		renderer.setXTitle("Time");    //X标签
 		renderer.setAxisTitleTextSize(20);//轴标签大小
@@ -496,8 +547,16 @@ public class ChartsActivity extends Activity implements View.OnClickListener {  
 		r2.setPointStyle(PointStyle.POINT);//数据点形状
 		r2.setFillBelowLine(false);
 		r2.setFillPoints(true);
+		XYSeriesRenderer r3 = new XYSeriesRenderer();
+		r3.setColor(Color.GREEN);//数据点颜色
+		r3.setChartValuesTextSize(15);
+		r3.setChartValuesSpacing(1);
+		r3.setPointStyle(PointStyle.POINT);//数据点形状
+		r3.setFillBelowLine(false);
+		r3.setFillPoints(true);
 		renderer.addSeriesRenderer(r1);
 		renderer.addSeriesRenderer(r2);
+		renderer.addSeriesRenderer(r3);
 		renderer.setMarginsColor(Color.WHITE);
 		renderer.setPanEnabled(true, true);
 		renderer.setShowGrid(true);
@@ -514,14 +573,16 @@ public class ChartsActivity extends Activity implements View.OnClickListener {  
 	 * @param series2
 	 * @return
 	 */
-	private XYMultipleSeriesDataset getDateDemoDataset(XYMultipleSeriesDataset dataset, TimeSeries series1, TimeSeries series2) {
+	private XYMultipleSeriesDataset getDateDemoDataset(XYMultipleSeriesDataset dataset, TimeSeries series1, TimeSeries series2, TimeSeries series3) {
 		final int nr = 201;                                        //200个数
 		for (int k = 0; k < nr; k++) {
 			series1.add(k, 0);    //初始化为0
 			series2.add(k, 0);
+			series3.add(k, 0);
 		}
 		dataset.addSeries(series1);                            //图表数据集加入数据组
 		dataset.addSeries(series2);
+		dataset.addSeries(series3);
 
 		Log.i(TAG, dataset.toString());
 		return dataset;                                    //返回数据集
@@ -670,6 +731,17 @@ public class ChartsActivity extends Activity implements View.OnClickListener {  
 		Logger.i("设备地址：" + gatt.getDevice().getAddress());
 		switch(gatt.getDevice().getAddress()){
 			case GASPRESSUREADDR:
+				GP_DATA_BUFFER[0] = System.currentTimeMillis();
+				GP_DATA_BUFFER[1] = Long.valueOf(((((short) value[0]) << 8) | ((short) value[1] & 0xff)));
+				GP_DATA_BUFFER[1] = GP_DATA_BUFFER[1] * 3600L / 1024L;
+				Logger.i("时间:" + GP_DATA_BUFFER[0] + "气箱数据:" +GP_DATA_BUFFER[1]);
+				if (RECORD_STATA) {
+					ArrayList<Long> list = new ArrayList<>(GP_DATA_BUFFER.length);
+					Collections.addAll(list, GP_DATA_BUFFER);
+					GP_Record_Data.add(list);
+				}
+				break;
+			case BLOODPRESSUREADDR:
 				// 缓存区，更新时从BP_DATA_BUFFER里取
 				BP_DATA_BUFFER[0] = System.currentTimeMillis();
 				BP_DATA_BUFFER[1] = Long.valueOf(((((short) value[0]) << 8) | ((short) value[1] & 0xff)));
@@ -681,35 +753,21 @@ public class ChartsActivity extends Activity implements View.OnClickListener {  
 					BP_Record_Data.add(list);
 				}
 				break;
-			case BLOODPRESSUREADDR:
-				SPO2_DATA_BUFFER[0] = System.currentTimeMillis();
-				SPO2_DATA_BUFFER[1] = Long.valueOf(((((short) value[0]) << 8) | ((short) value[1] & 0xff)));
-				SPO2_DATA_BUFFER[1] = SPO2_DATA_BUFFER[1] * 3600L / 1024L;
-				Logger.i("时间:" + SPO2_DATA_BUFFER[0] + "血压数据:" +SPO2_DATA_BUFFER[1]);
-				if (RECORD_STATA) {
-					ArrayList<Long> list = new ArrayList<>(SPO2_DATA_BUFFER.length);
-					Collections.addAll(list, SPO2_DATA_BUFFER);
-					SPO2_Record_Data.add(list);
+			case CUFFPRESSUREADDR:
+				if (value.length == 12) {
+					CP_DATA_BUFFER[0] = System.currentTimeMillis();
+					CP_DATA_BUFFER[1] = Long.valueOf(((((short) value[7]) << 8) | ((short) value[8] & 0xff)));
+					Logger.i("时间:" + CP_DATA_BUFFER[0] + "袖带数据:" + CP_DATA_BUFFER[1]);
+					if (RECORD_STATA) {
+						ArrayList<Long> list = new ArrayList<>(CP_DATA_BUFFER.length);
+						Collections.addAll(list, CP_DATA_BUFFER);
+						CP_Record_Data.add(list);
+					}
 				}
-				break;
 			default:
 				break;
 		}
 		EventBus.getDefault().post(new RefreshDatas()); // 发送消息，更新UI 显示数据 ④发送事件
-	}
-
-	private void startBloodAndSPO2(){
-		for(Map.Entry<BluetoothGatt, BluetoothGattCharacteristic> entry:bluetoothHashMap.entrySet()){
-			entry.getValue().setValue(SPO2START);
-			entry.getKey().writeCharacteristic(entry.getValue());
-			try {
-				Thread.sleep(200);
-				entry.getValue().setValue(BLOODSTART);
-				while(entry.getKey().writeCharacteristic(entry.getValue()));
-			} catch (InterruptedException e) {
-				e.printStackTrace();
-			}
-		}
 	}
 
 	private void startInflating(){
@@ -723,14 +781,9 @@ public class ChartsActivity extends Activity implements View.OnClickListener {  
 
 	private void stopBloodAndSPO2(){
 		for(Map.Entry<BluetoothGatt, BluetoothGattCharacteristic> entry:bluetoothHashMap.entrySet()){
-			entry.getValue().setValue(SPO2STOP);
-			entry.getKey().writeCharacteristic(entry.getValue());
-			try {
-				Thread.sleep(200);
+			if (entry.getKey().getDevice().getAddress().equals(CUFFPRESSUREADDR)){
 				entry.getValue().setValue(BLOODSTOP);
-				while(entry.getKey().writeCharacteristic(entry.getValue()));
-			} catch (InterruptedException e) {
-				e.printStackTrace();
+				entry.getKey().writeCharacteristic(entry.getValue());
 			}
 		}
 	}

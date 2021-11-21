@@ -98,7 +98,7 @@ public class ExcelIO {
     }
 
 
-    public static void initExcel(File file, String fileName, String[] colName0, String[] colName1) {
+    public static void initExcel(File file, String fileName, String[] colName0, String[] colName1, String[] colName2) {
         format();
         WritableWorkbook workbook = null;
         try {
@@ -108,9 +108,14 @@ public class ExcelIO {
             for (int col = 0; col < colName0.length; col++) {
                 sheet0.addCell(new Label(col, 0, colName0[col], arial10format));
             }
-            WritableSheet sheet1 = workbook.createSheet("SPO2Data", 1);
+            WritableSheet sheet1 = workbook.createSheet("GasPressureData", 1);
             sheet1.addCell((WritableCell) new Label(0, 0, fileName, arial14format));
             for (int col = 0; col < colName1.length; col++) {
+                sheet1.addCell(new Label(col, 0, colName1[col], arial10format));
+            }
+            WritableSheet sheet2 = workbook.createSheet("CuffPressureData", 2);
+            sheet2.addCell((WritableCell) new Label(0, 0, fileName, arial14format));
+            for (int col = 0; col < colName2.length; col++) {
                 sheet1.addCell(new Label(col, 0, colName1[col], arial10format));
             }
             workbook.write();

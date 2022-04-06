@@ -2,6 +2,8 @@
 <project version="4">
   <component name="ProjectModuleManager">
     <modules>
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/BLE-Monitor.iml" filepath="$PROJECT_DIR$/.idea/modules/BLE-Monitor.iml" group="BLE-Monitor" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/app/BLE-Monitor-app.iml" filepath="$PROJECT_DIR$/.idea/modules/app/BLE-Monitor-app.iml" group="BLE-Monitor/app" />
       <module fileurl="file://$PROJECT_DIR$/BloodPressureMonitor_Single.iml" filepath="$PROJECT_DIR$/BloodPressureMonitor_Single.iml" group="BloodPressureMonitor_Single" />
       <module fileurl="file://$PROJECT_DIR$/.idea/modules/Monitor-master-zgs.iml" filepath="$PROJECT_DIR$/.idea/modules/Monitor-master-zgs.iml" group="Monitor-master-zgs" />
       <module fileurl="file://$PROJECT_DIR$/.idea/modules/app/Monitor-master-zgs-app.iml" filepath="$PROJECT_DIR$/.idea/modules/app/Monitor-master-zgs-app.iml" group="Monitor-master-zgs/app" />

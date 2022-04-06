@@ -133,8 +133,10 @@ public class ChartsActivity extends Activity implements View.OnClickListener {  
 
 	/* 三个设备的物理Mac地址 */
 	private final String BLOODPRESSUREADDR = "E7:4E:AD:39:EC:EC";
-	private final String GASPRESSUREADDR = "CA:CE:1D:C0:97:C8";
-	private final String CUFFPRESSUREADDR = "74:8B:34:00:09:0D";
+	//private final String BLOODPRESSUREADDR = "CF:F7:6A:38:75:B5";
+	// private final String GASPRESSUREADDR = "CA:CE:1D:C0:97:C8";
+	private final String GASPRESSUREADDR = "F1:4D:87:25:AB:4D";
+	private final String CUFFPRESSUREADDR = "74:8B:34:00:00:48";
 	/* 蓝牙数据接受容器 */
 	Long[] BP_DATA_BUFFER = new Long[2];
 	Long[] GP_DATA_BUFFER = new Long[2];
@@ -376,6 +378,7 @@ public class ChartsActivity extends Activity implements View.OnClickListener {  
 				GP_Record_Data.clear();
 				CP_Record_Data.clear();
 				RECORD_STATA = true;//记录数据标志位
+				startInflating();
 				savebutton.setText(this.getString(R.string.SaveData));//重置保存按钮
 				break;
 
@@ -383,7 +386,7 @@ public class ChartsActivity extends Activity implements View.OnClickListener {  
 			case R.id.inflateButton1:
 				// 向 健拓设备发送开始测量信号
 				try{
-					timer.schedule(taskForInflate, 60 * 1000);
+					timer.schedule(taskForInflate, 60 * 100);
 				}catch (Exception e){
 					e.printStackTrace();
 				}
@@ -636,12 +639,14 @@ public class ChartsActivity extends Activity implements View.OnClickListener {  
 	private void connentBluetooth() {
 		String[] objects = connectDeviceMacList.toArray(new String[connectDeviceMacList.size()]);
 		multiConnectManager.addDeviceToQueue(objects);
+
 		multiConnectManager.addConnectStateListener(new ConnectStateListener() {
 			@Override
 			public void onConnectStateChanged(String address, ConnectState state) {
 				switch (state) {
 					case CONNECTING:
-						Log.i("connectStateX", "设备:" + address + "连接状态:" + "正在连接");
+
+						Log.v("connectStateX", "设备:" + address + "连接状态:" + "正在连接");
 						break;
 					case CONNECTED:
 						String[] devices = connectDeviceMacList.toArray(new String[connectDeviceMacList.size()]);

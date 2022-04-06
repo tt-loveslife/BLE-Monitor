@@ -150,7 +150,7 @@ public class ExcelIO {
                 for (int i = 0; i < objList.size(); i++) {                                   //j行 i列
                     ArrayList<Long> list = objList.get(i);
                     for (int j = 0; j < list.size(); j++) {
-                        sheet.addCell(new Label(j,i + 1 , list.get(j).toString(), arial12format));
+                        sheet.addCell(new jxl.write.Number(j,i + 1 , list.get(j), arial12format));
                     }
                 }
                 writebook.write();

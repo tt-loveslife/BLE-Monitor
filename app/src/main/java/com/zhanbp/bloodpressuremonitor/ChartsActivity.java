@@ -128,30 +128,30 @@ public class ChartsActivity extends Activity implements View.OnClickListener {  
 	boolean mearsure_flag = false;//开始测量标志位
 
 	/* 血压重启设备、血氧接受设备工作指令 */
-	private final byte[] BLOODSTART = {(byte) 0XFA, (byte) 0XAA, (byte) 0XAA, (byte) 0XAF,(byte) 0X00,(byte) 0X0A,(byte) 0X10,(byte) 0X1A, (byte) 0XF5,(byte) 0X5F};
-	private final byte[] BLOODSTOP =  {(byte) 0XFA, (byte) 0XAA, (byte) 0XAA, (byte) 0XAF,(byte) 0X00,(byte) 0X0A,(byte) 0X11,(byte) 0X1B, (byte) 0XF5,(byte) 0X5F};
+//	private final byte[] BLOODSTART = {(byte) 0XFA, (byte) 0XAA, (byte) 0XAA, (byte) 0XAF,(byte) 0X00,(byte) 0X0A,(byte) 0X10,(byte) 0X1A, (byte) 0XF5,(byte) 0X5F};
+//	private final byte[] BLOODSTOP =  {(byte) 0XFA, (byte) 0XAA, (byte) 0XAA, (byte) 0XAF,(byte) 0X00,(byte) 0X0A,(byte) 0X11,(byte) 0X1B, (byte) 0XF5,(byte) 0X5F};
+	private final byte[] SPO2START = {(byte) 0XFA, (byte) 0XAA, (byte) 0XAA, (byte) 0XFA,(byte) 0X00,(byte) 0X0A,(byte) 0X10,(byte) 0X1A, (byte) 0XF5,(byte) 0X5F};
+	private final byte[] SPO2STOP =  {(byte) 0XFA, (byte) 0XAA, (byte) 0XAA, (byte) 0XFA,(byte) 0X00,(byte) 0X0A,(byte) 0X11,(byte) 0X1B, (byte) 0XF5,(byte) 0X5F};
 
 	/* 三个设备的物理Mac地址 */
-	private final String BLOODPRESSUREADDR = "E7:4E:AD:39:EC:EC";
-	//private final String BLOODPRESSUREADDR = "CF:F7:6A:38:75:B5";
-	// private final String GASPRESSUREADDR = "CA:CE:1D:C0:97:C8";
-	private final String GASPRESSUREADDR = "F1:4D:87:25:AB:4D";
-	private final String CUFFPRESSUREADDR = "74:8B:34:00:00:48";
+	private final String BLOODPRESSUREADDR = "74:8B:34:00:00:4B";
+	private final String SPO2ADDR = "74:8B:34:00:04:3A";
+	private final String CUFFPRESSUREADDR = "CB:7B:BE:BD:D3:6A";
 	/* 蓝牙数据接受容器 */
 	Long[] BP_DATA_BUFFER = new Long[2];
-	Long[] GP_DATA_BUFFER = new Long[2];
+	Long[] SPO2_DATA_BUFFER = new Long[6];
 	Long[] CP_DATA_BUFFER = new Long[2];
 	int[] ycache = new int[201];	//Y缓存，更新用
 
 	/* Excel 图表列标题 */
 	private String[] title2 = {"时间","袖带压力"};
-	private String[] title1 = {"时间","气箱压力"};
+	private String[] title1 = {"时间","血氧饱和度(%)", "脉率(beats/min)", "灌注指数", "柱状图","波形图"};
 	private String[] title0 = {"时间","血压"};
 
 	/* 数据DAO容器 */
 	private ArrayList<ArrayList<Long>> CP_Record_Data;//数据集,保存记录用(0)时间 (1)压力值
 	private ArrayList<ArrayList<Long>> BP_Record_Data;//数据集,保存记录用(0)时间 (1)压力值
-	private ArrayList<ArrayList<Long>> GP_Record_Data;//数据集,保存记录用(0)时间 (1)压力值
+	private ArrayList<ArrayList<Long>> SPO2_Record_Data = new ArrayList();//数据集,保存记录用(0)时间 (1)血氧 (3)脉率 (4)灌注指数 （5）柱状图 （6）波形图
 
 	/* 保存Excel相关信息 */
 	private String ExcelName;
@@ -232,10 +232,10 @@ public class ChartsActivity extends Activity implements View.OnClickListener {  
 			BP_DATA_BUFFER[j] = Long.valueOf(0);
 		}
 		BP_Record_Data = new ArrayList<>();
-		for (int j = 0; j < GP_DATA_BUFFER.length; j++) {
-			GP_DATA_BUFFER[j] = Long.valueOf(0);
+		for (int j = 0; j < SPO2_DATA_BUFFER.length; j++) {
+			SPO2_DATA_BUFFER[j] = Long.valueOf(0);
 		}
-		GP_Record_Data = new ArrayList<>();
+		SPO2_Record_Data = new ArrayList<>();
 		for (int j = 0; j < CP_DATA_BUFFER.length; j++) {
 			CP_DATA_BUFFER[j] = Long.valueOf(0);
 		}
@@ -312,7 +312,7 @@ public class ChartsActivity extends Activity implements View.OnClickListener {  
 			public void handleMessage(Message msg) {
 				// 确认连接成功后，刷新数据
 				if (CONNECT_STATA) {
-					updateChart(chart1,dataset1,series11,series12,series13,BP_DATA_BUFFER[1],GP_DATA_BUFFER[1], CP_DATA_BUFFER[1]);
+					updateChart(chart1,dataset1,series11,series12,series13,BP_DATA_BUFFER[1],SPO2_DATA_BUFFER[5], CP_DATA_BUFFER[1]);
 				}
 				super.handleMessage(msg);
 			}
@@ -334,7 +334,7 @@ public class ChartsActivity extends Activity implements View.OnClickListener {  
 				// 确认连接成功后，刷新数据
 				if (CONNECT_STATA) {
 					BLE1_offset.setText("BP: " + BP_DATA_BUFFER[1]);
-					BLE2_offset.setText("SpO2: " + GP_DATA_BUFFER[1]);
+					BLE2_offset.setText("SpO2: " + SPO2_DATA_BUFFER[5]);
 				}
 				super.handleMessage(msg);
 			}
@@ -375,7 +375,7 @@ public class ChartsActivity extends Activity implements View.OnClickListener {  
 			case R.id.startButton1:
 				//将数据清零，重新开始记录
 				BP_Record_Data.clear();
-				GP_Record_Data.clear();
+				SPO2_Record_Data.clear();
 				CP_Record_Data.clear();
 				RECORD_STATA = true;//记录数据标志位
 				startInflating();
@@ -385,14 +385,15 @@ public class ChartsActivity extends Activity implements View.OnClickListener {  
 			/* 延时充气测量 */
 			case R.id.inflateButton1:
 				// 向 健拓设备发送开始测量信号
-				try{
-					timer.schedule(taskForInflate, 60 * 100);
-				}catch (Exception e){
-					e.printStackTrace();
-				}
+//				try{
+//					timer.schedule(taskForInflate, 60 * 100);
+//				}catch (Exception e){
+//					e.printStackTrace();
+//				}
+				startInflating();
 				//将数据清零，重新开始记录
 				BP_Record_Data.clear();
-				GP_Record_Data.clear();
+				SPO2_Record_Data.clear();
 				CP_Record_Data.clear();
 				RECORD_STATA = true;//记录数据标志位
 				savebutton.setText(this.getString(R.string.SaveData));//重置保存按钮
@@ -401,7 +402,7 @@ public class ChartsActivity extends Activity implements View.OnClickListener {  
 			/*停止记录*/
 			case R.id.stopButton1:
 				stopBloodAndSPO2();
-				if (startrecord_flag && (!BP_Record_Data.isEmpty() || !GP_Record_Data.isEmpty() || !CP_Record_Data.isEmpty())) {
+				if (startrecord_flag && (!BP_Record_Data.isEmpty() || !SPO2_Record_Data.isEmpty() || !CP_Record_Data.isEmpty())) {
 					RECORD_STATA = false;
 					savebutton.setText(this.getString(R.string.preSaveData));//提示保存数据
 				}
@@ -409,7 +410,7 @@ public class ChartsActivity extends Activity implements View.OnClickListener {  
 
 			/*保存数据*/
 			case R.id.saveButton1:
-				if (!BP_Record_Data.isEmpty() || !GP_Record_Data.isEmpty() || !CP_Record_Data.isEmpty()) {
+				if (!BP_Record_Data.isEmpty() || !SPO2_Record_Data.isEmpty() || !CP_Record_Data.isEmpty()) {
 					setExcelNameAndSave();//弹窗取名//保存
 				} else {
 					Toast.makeText(this, "未记录任何数据", Toast.LENGTH_LONG).show();
@@ -455,7 +456,7 @@ public class ChartsActivity extends Activity implements View.OnClickListener {  
 		if (absolutePath != null) {
 			ExcelIO.initExcel(xlsFile, absolutePath, title0, title1, title2);//
 			ExcelIO.writeObjListToExcel(BP_Record_Data,absolutePath, this, 0);
-			ExcelIO.writeObjListToExcel(GP_Record_Data, absolutePath, this, 1);
+			ExcelIO.writeObjListToExcel(SPO2_Record_Data, absolutePath, this, 1);
 			ExcelIO.writeObjListToExcel(CP_Record_Data, absolutePath, this, 2);
 			savebutton.setText(this.getString(R.string.SaveData));//重置保存按钮
 		}
@@ -675,8 +676,8 @@ public class ChartsActivity extends Activity implements View.OnClickListener {  
 				super.onCharacteristicChanged(gatt, characteristic);
 				//Logger.i("数据接受回调");
 				switch(gatt.getDevice().getAddress()){
-					case GASPRESSUREADDR:
-						dealGPData(characteristic);
+					case SPO2ADDR:
+						dealSPO2Data(characteristic);
 						break;
 					case BLOODPRESSUREADDR:
 						dealBPData(characteristic);
@@ -685,6 +686,7 @@ public class ChartsActivity extends Activity implements View.OnClickListener {  
 						dealCPData(characteristic);
 						break;
 					default:
+						dealBPData(characteristic);
 						break;
 				}
 			}
@@ -710,7 +712,7 @@ public class ChartsActivity extends Activity implements View.OnClickListener {  
 				Logger.i("数据发送");
 			}
 		});
-		//1.服务UUID
+		//1.服务UUID:0000fff0-0000-1000-8000-00805f9b34fb
 		multiConnectManager.setServiceUUID("0000fff0-0000-1000-8000-00805f9b34fb");
 		//2.clean history descriptor data（清除历史订阅读写通知）
 		multiConnectManager.cleanSubscribeData();
@@ -737,18 +739,17 @@ public class ChartsActivity extends Activity implements View.OnClickListener {  
 	 * 处理气箱数据
 	 * @param characteristic：蓝牙特征，携带相关数据
 	 */
-	private void dealGPData(BluetoothGattCharacteristic characteristic){
+	private void dealSPO2Data(BluetoothGattCharacteristic characteristic){
 		byte[] value = characteristic.getValue();
-		GP_DATA_BUFFER[0] = System.currentTimeMillis();
-		GP_DATA_BUFFER[1] = Long.valueOf(((((short) value[0]) << 8) | ((short) value[1] & 0xff)));
-		GP_DATA_BUFFER[1] = GP_DATA_BUFFER[1] * 3600L / 1024L;
-		Logger.i("时间:" + GP_DATA_BUFFER[0] + "气箱数据:" +GP_DATA_BUFFER[1]);
-		if (RECORD_STATA) {
-			ArrayList<Long> list = new ArrayList<>(GP_DATA_BUFFER.length);
-			Collections.addAll(list, GP_DATA_BUFFER);
-			GP_Record_Data.add(list);
+		SPO2_DATA_BUFFER[0] = System.currentTimeMillis();
+		for(int i = 1; i < SPO2_DATA_BUFFER.length; i++){// 血氧数据获取：血氧饱和度、脉率、灌注指数、柱状图、波形图
+			SPO2_DATA_BUFFER[i] = Long.valueOf(((short) value[i + 6] & 0xff));
 		}
-		EventBus.getDefault().post(new RefreshDatas()); // 发送消息，更新UI 显示数据 ④发送事件
+		if (RECORD_STATA) {
+			ArrayList<Long> list = new ArrayList<>(SPO2_DATA_BUFFER.length);
+			Collections.addAll(list, SPO2_DATA_BUFFER);
+			SPO2_Record_Data.add(list);
+		}
 	}
 
 	/**
@@ -793,10 +794,15 @@ public class ChartsActivity extends Activity implements View.OnClickListener {  
 	 */
 	private void startInflating(){
 		for(Map.Entry<BluetoothGatt, BluetoothGattCharacteristic> entry:bluetoothHashMap.entrySet()){
-			if (entry.getKey().getDevice().getAddress().equals(CUFFPRESSUREADDR)){
-				entry.getValue().setValue(BLOODSTART);
-				entry.getKey().writeCharacteristic(entry.getValue());
-			}
+			entry.getValue().setValue(SPO2START);
+			entry.getKey().writeCharacteristic(entry.getValue());
+//			try {
+//				Thread.sleep(200);
+//				entry.getValue().setValue(BLOODSTART);
+//				while(entry.getKey().writeCharacteristic(entry.getValue()));
+//			} catch (InterruptedException e) {
+//				e.printStackTrace();
+//			}
 		}
 	}
 
@@ -805,10 +811,15 @@ public class ChartsActivity extends Activity implements View.OnClickListener {  
 	 */
 	private void stopBloodAndSPO2(){
 		for(Map.Entry<BluetoothGatt, BluetoothGattCharacteristic> entry:bluetoothHashMap.entrySet()){
-			if (entry.getKey().getDevice().getAddress().equals(CUFFPRESSUREADDR)){
-				entry.getValue().setValue(BLOODSTOP);
-				entry.getKey().writeCharacteristic(entry.getValue());
-			}
+			entry.getValue().setValue(SPO2STOP);
+			entry.getKey().writeCharacteristic(entry.getValue());
+//			try {
+//				Thread.sleep(200);
+//				entry.getValue().setValue(BLOODSTOP);
+//				while(entry.getKey().writeCharacteristic(entry.getValue()));
+//			} catch (InterruptedException e) {
+//				e.printStackTrace();
+//			}
 		}
 	}
 

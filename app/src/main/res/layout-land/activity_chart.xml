@@ -13,7 +13,7 @@
 
         <LinearLayout
             android:layout_width="fill_parent"
-            android:layout_height="wrap_content"
+            android:layout_height="54dp"
             android:layout_gravity="start"
             android:orientation="horizontal">
 
@@ -21,7 +21,7 @@
                 android:id="@+id/ble1"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:padding="10dp"
+                android:padding="17dp"
                 android:text="@string/ble1" />
 
             <LinearLayout
@@ -30,19 +30,26 @@
                 android:layout_gravity="start"
                 android:orientation="vertical">
 
-                    <TextView
+                <TextView
                     android:id="@+id/ble1_offset"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:gravity="end"
                     android:text="@string/ble1_offset" />
 
-                    <TextView
-                        android:id="@+id/ble2_offset"
+                <TextView
+                    android:id="@+id/ble2_offset"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:gravity="end"
+                    android:text="@string/ble2_offset" />
+
+                <TextView
+                        android:id="@+id/ble3_offset"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:gravity="end"
-                        android:text="@string/ble2_offset" />
+                        android:text="@string/ble3_offset" />
 
             </LinearLayout>
         </LinearLayout>

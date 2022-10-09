@@ -36,10 +36,12 @@ public class ExcelIO {
 
     public final static String UTF8_ENCODING = "UTF-8";
     public final static String GBK_ENCODING  = "GBK";
+    public final static String SHEET_0 = "BloodPressureData";
+    public final static String SHEET_1 = "PPGData";
+    public final static String SHEET_2 = "ECGData";
 
     private Context context ;
     public ExcelIO(Context context) {
-        // TODO Auto-generated constructor stub
         this.context = context;
     }
 
@@ -67,7 +69,6 @@ public class ExcelIO {
             arial12format.setBorder(jxl.format.Border.ALL,
                     jxl.format.BorderLineStyle.THIN);
         } catch (WriteException e) {
-
             e.printStackTrace();
         }
     }
@@ -77,8 +78,8 @@ public class ExcelIO {
         WritableWorkbook workbook = null;
         try {
             workbook = Workbook.createWorkbook(file);
-            WritableSheet sheet0 = workbook.createSheet("BloodPressureData", 0);
-            sheet0.addCell((WritableCell) new Label(0, 0, fileName, arial14format));
+            WritableSheet sheet0 = workbook.createSheet(SHEET_0, 0);
+            sheet0.addCell(new Label(0, 0, fileName, arial14format));
             for (int col = 0; col < colName0.length; col++) {
                 sheet0.addCell(new Label(col, 0, colName0[col], arial10format));
             }
@@ -103,21 +104,22 @@ public class ExcelIO {
         WritableWorkbook workbook = null;
         try {
             workbook = Workbook.createWorkbook(file);
-            WritableSheet sheet0 = workbook.createSheet("BloodPressureData", 0);
-            sheet0.addCell((WritableCell) new Label(0, 0, fileName, arial14format));
+
+            WritableSheet sheet0 = workbook.createSheet(SHEET_0, 0);
             for (int col = 0; col < colName0.length; col++) {
                 sheet0.addCell(new Label(col, 0, colName0[col], arial10format));
             }
-            WritableSheet sheet1 = workbook.createSheet("GasPressureData", 1);
-            sheet1.addCell((WritableCell) new Label(0, 0, fileName, arial14format));
+
+            WritableSheet sheet1 = workbook.createSheet(SHEET_1, 1);
             for (int col = 0; col < colName1.length; col++) {
                 sheet1.addCell(new Label(col, 0, colName1[col], arial10format));
             }
-            WritableSheet sheet2 = workbook.createSheet("CuffPressureData", 2);
-            sheet2.addCell((WritableCell) new Label(0, 0, fileName, arial14format));
+
+            WritableSheet sheet2 = workbook.createSheet(SHEET_2, 2);
             for (int col = 0; col < colName2.length; col++) {
-                sheet1.addCell(new Label(col, 0, colName1[col], arial10format));
+                sheet2.addCell(new Label(col, 0, colName2[col], arial10format));
             }
+
             workbook.write();
         } catch (Exception e) {
             e.printStackTrace();
@@ -126,7 +128,6 @@ public class ExcelIO {
                 try {
                     workbook.close();
                 } catch (Exception e) {
-                    // TODO Auto-generated catch block
                     e.printStackTrace();
                 }
             }

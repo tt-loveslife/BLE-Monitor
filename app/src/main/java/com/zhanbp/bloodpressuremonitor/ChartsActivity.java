@@ -790,7 +790,7 @@ public class ChartsActivity extends Activity implements View.OnClickListener {  
 
 				}
 
-			}else if(entry.getKey().getDevice().getName().contains("bp")){
+			}else if(entry.getKey().getDevice().getName().contains("BP")){
 				entry.getValue().setValue(BLOOD_START);
 				while(entry.getKey().writeCharacteristic(entry.getValue()));
 				try {

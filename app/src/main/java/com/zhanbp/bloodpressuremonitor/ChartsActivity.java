@@ -738,7 +738,7 @@ public class ChartsActivity extends Activity implements View.OnClickListener {  
 	private void dealECGData(BluetoothGattCharacteristic characteristic){
 		byte[] value = characteristic.getValue();
 		ECG_DATA_BUFFER[0] = System.currentTimeMillis();
-		ECG_DATA_BUFFER[1] = Long.valueOf(((((short) value[7]) << 8) | ((short) value[8] & 0xff)));
+		ECG_DATA_BUFFER[1] = Long.valueOf(((((short) value[0]) << 8) | ((short) value[1] & 0xff)));
 		Logger.i("时间:" + ECG_DATA_BUFFER[0] + "袖带数据:" + ECG_DATA_BUFFER[1]);
 		if (RECORD_STATA) {
 			ArrayList<Long> list = new ArrayList<>(ECG_DATA_BUFFER.length);

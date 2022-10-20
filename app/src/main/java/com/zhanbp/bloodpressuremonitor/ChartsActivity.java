@@ -72,6 +72,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -144,7 +145,7 @@ public class ChartsActivity extends Activity implements View.OnClickListener {  
 	private String[] title0 = {"时间","血压"};
 
 	/* 数据DAO容器 */
-	private ArrayList<ArrayList<Long>> CP_Record_Data;//数据集,保存记录用(0)时间 (1)压力值
+	private ArrayList<ArrayList<Long>> ECG_Record_Data;//数据集,保存记录用(0)时间 (1)压力值
 	private ArrayList<ArrayList<Long>> BP_Record_Data;//数据集,保存记录用(0)时间 (1)压力值
 	private ArrayList<ArrayList<Long>> PPG_Record_Data = new ArrayList();//数据集,保存记录用(0)时间 (1)血氧 (3)脉率 (4)灌注指数 （5）柱状图 （6）波形图
 
@@ -234,7 +235,7 @@ public class ChartsActivity extends Activity implements View.OnClickListener {  
 		for (int j = 0; j < ECG_DATA_BUFFER.length; j++) {
 			ECG_DATA_BUFFER[j] = Long.valueOf(0);
 		}
-		CP_Record_Data = new ArrayList<>();
+		ECG_Record_Data = new ArrayList<>();
 		seriesDC1 = new TimeSeries("time1");
 		seriesDC2 = new TimeSeries("time2");
 		seriesDC3 = new TimeSeries("time3");
@@ -321,7 +322,7 @@ public class ChartsActivity extends Activity implements View.OnClickListener {  
 				handler.sendMessage(message);
 			}
 		};
-		timer.schedule(task, 1, 150);//p1：要操作的方法，p2：要设定延迟的时间，p3：周期的设定（ms单位）
+		timer.schedule(task, 1, 80);//p1：要操作的方法，p2：要设定延迟的时间，p3：周期的设定（ms单位）
 
 		// 延时 1ms 每隔500ms刷新一次曲线值
 		curveValueHandler = new Handler(){
@@ -344,25 +345,7 @@ public class ChartsActivity extends Activity implements View.OnClickListener {  
 				curveValueHandler.sendMessage(message);
 			}
 		};
-		timer.schedule(taskForCurve, 1, 550);//p1：要操作的方法，p2：要设定延迟的时间，p3：周期的设定（ms单位）
-
-		// 延时充气： 点击后 1min 开始充气
-		inflateHandler = new Handler(){
-			@Override
-			public void handleMessage(Message msg) {
-				// 确认连接成功后，刷新数据
-				startInflating();
-				super.handleMessage(msg);
-			}
-		};
-		taskForInflate = new TimerTask() {
-			@Override
-			public void run() {
-				Message message = new Message();
-				message.what = 200;//用户自定义码,ID
-				inflateHandler.sendMessage(message);
-			}
-		};
+		timer.schedule(taskForCurve, 1, 300);//p1：要操作的方法，p2：要设定延迟的时间，p3：周期的设定（ms单位）
 	}
 
 	@Override
@@ -373,32 +356,21 @@ public class ChartsActivity extends Activity implements View.OnClickListener {  
 				//将数据清零，重新开始记录
 				BP_Record_Data.clear();
 				PPG_Record_Data.clear();
-				CP_Record_Data.clear();
+				ECG_Record_Data.clear();
 				RECORD_STATA = true;//记录数据标志位
-				startInflating();
 				savebutton.setText(this.getString(R.string.SaveData));//重置保存按钮
 				break;
 
 			/* 延时充气测量 */
 			case R.id.inflateButton1:
-				// 向 健拓设备发送开始测量信号
-//				try{
-//					timer.schedule(taskForInflate, 60 * 100);
-//				}catch (Exception e){
-//					e.printStackTrace();
-//				}
 				startInflating();
-				//将数据清零，重新开始记录
-				BP_Record_Data.clear();
-				PPG_Record_Data.clear();
-				CP_Record_Data.clear();
-				RECORD_STATA = true;//记录数据标志位
+				RECORD_STATA = true;
 				savebutton.setText(this.getString(R.string.SaveData));//重置保存按钮
 				break;
 
 			/*停止记录*/
 			case R.id.stopButton1:
-				if (startrecord_flag && (!BP_Record_Data.isEmpty() || !PPG_Record_Data.isEmpty() || !CP_Record_Data.isEmpty())) {
+				if (startrecord_flag && (!BP_Record_Data.isEmpty() || !PPG_Record_Data.isEmpty() || !ECG_Record_Data.isEmpty())) {
 					RECORD_STATA = false;
 					savebutton.setText(this.getString(R.string.preSaveData));//提示保存数据
 				}
@@ -406,7 +378,7 @@ public class ChartsActivity extends Activity implements View.OnClickListener {  
 
 			/*保存数据*/
 			case R.id.saveButton1:
-				if (!BP_Record_Data.isEmpty() || !PPG_Record_Data.isEmpty() || !CP_Record_Data.isEmpty()) {
+				if (!BP_Record_Data.isEmpty() || !PPG_Record_Data.isEmpty() || !ECG_Record_Data.isEmpty()) {
 					setExcelNameAndSave();//弹窗取名//保存
 				} else {
 					Toast.makeText(this, "未记录任何数据", Toast.LENGTH_LONG).show();
@@ -453,7 +425,7 @@ public class ChartsActivity extends Activity implements View.OnClickListener {  
 			ExcelIO.initExcel(xlsFile, absolutePath, title0, title1, title2);//
 			ExcelIO.writeObjListToExcel(BP_Record_Data,absolutePath, this, 0);
 			ExcelIO.writeObjListToExcel(PPG_Record_Data, absolutePath, this, 1);
-			ExcelIO.writeObjListToExcel(CP_Record_Data, absolutePath, this, 2);
+			ExcelIO.writeObjListToExcel(ECG_Record_Data, absolutePath, this, 2);
 			savebutton.setText(this.getString(R.string.SaveData));//重置保存按钮
 		}
 	}
@@ -560,7 +532,7 @@ public class ChartsActivity extends Activity implements View.OnClickListener {  
 		renderer.setMarginsColor(Color.WHITE);
 		renderer.setPanEnabled(true, true);
 		renderer.setShowGrid(true);
-		renderer.setYAxisMax(3600);//Y最大范围
+		renderer.setYAxisMax(500);//Y最大范围
 		renderer.setYAxisMin(0);//Y最小范围
 		renderer.setInScroll(true);  //滚动
 		return renderer;
@@ -675,7 +647,7 @@ public class ChartsActivity extends Activity implements View.OnClickListener {  
 					dealPPGData(characteristic);
 				}else if(gatt.getDevice().getName().contains("BP")){
 					dealBPData(characteristic);
-				}else if(gatt.getDevice().getName().contains("ecg")){
+				}else if(gatt.getDevice().getName().contains("ECG")){
 					dealECGData(characteristic);
 				}else{
 					dealBPData(characteristic);
@@ -731,11 +703,11 @@ public class ChartsActivity extends Activity implements View.OnClickListener {  
 	private void dealPPGData(BluetoothGattCharacteristic characteristic){
 		byte[] value = characteristic.getValue();
 		PPG_DATA_BUFFER[0] = System.currentTimeMillis();
-		for(int i = 1; i < PPG_DATA_BUFFER.length; i++){// 血氧数据获取：血氧饱和度、脉率、灌注指数、柱状图、波形图
-			PPG_DATA_BUFFER[i] = Long.valueOf(((short) value[i + 6] & 0xff));
-		}
+		// 血氧数据获取：血氧饱和度、脉率、灌注指数、柱状图、波形图
+		PPG_DATA_BUFFER[5] = Long.valueOf(((short) value[5 + 6] & 0xff));
+
 		if (RECORD_STATA) {
-			ArrayList<Long> list = new ArrayList<>(PPG_DATA_BUFFER.length);
+			ArrayList<Long> list = new ArrayList<>();
 			Collections.addAll(list, PPG_DATA_BUFFER);
 			PPG_Record_Data.add(list);
 		}
@@ -749,7 +721,7 @@ public class ChartsActivity extends Activity implements View.OnClickListener {  
 		byte[] value = characteristic.getValue();
 		BP_DATA_BUFFER[0] = System.currentTimeMillis();
 		BP_DATA_BUFFER[1] = Long.valueOf(((((short) value[0]) << 8) | ((short) value[1] & 0xff)));
-		BP_DATA_BUFFER[1] = BP_DATA_BUFFER[1] * 3600L / 1024L;
+		BP_DATA_BUFFER[1] = BP_DATA_BUFFER[1] / 100L;
 		Logger.i("时间:" + BP_DATA_BUFFER[0] + "脉搏数据:" + BP_DATA_BUFFER[1]);
 		if (RECORD_STATA) {
 			ArrayList<Long> list = new ArrayList<>(BP_DATA_BUFFER.length);
@@ -771,7 +743,7 @@ public class ChartsActivity extends Activity implements View.OnClickListener {  
 		if (RECORD_STATA) {
 			ArrayList<Long> list = new ArrayList<>(ECG_DATA_BUFFER.length);
 			Collections.addAll(list, ECG_DATA_BUFFER);
-			CP_Record_Data.add(list);
+			ECG_Record_Data.add(list);
 		}
 		EventBus.getDefault().post(new RefreshDatas()); // 发送消息，更新UI 显示数据 ④发送事件
 	}
